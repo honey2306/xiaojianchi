@@ -1,0 +1,111 @@
+name: Build and publish APK
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Restore the stable release signing key
+        env:
+          LITTLE_STEPS_KEYSTORE_BASE64: >-
+            ${{ secrets.LITTLE_STEPS_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$LITTLE_STEPS_KEYSTORE_BASE64"
+          printf '%s' "$LITTLE_STEPS_KEYSTORE_BASE64" |
+            base64 -d > "$RUNNER_TEMP/little-steps.keystore"
+          chmod 600 "$RUNNER_TEMP/little-steps.keystore"
+      - name: Test, sign and verify release APK
+        env:
+          LITTLE_STEPS_KEYSTORE_FILE: >-
+            ${{ runner.temp }}/little-steps.keystore
+          LITTLE_STEPS_KEYSTORE_PASSWORD: >-
+            ${{ secrets.LITTLE_STEPS_KEYSTORE_PASSWORD }}
+          LITTLE_STEPS_KEY_ALIAS: >-
+            ${{ secrets.LITTLE_STEPS_KEY_ALIAS }}
+          LITTLE_STEPS_KEY_PASSWORD: >-
+            ${{ secrets.LITTLE_STEPS_KEY_PASSWORD }}
+        run: |
+          test -n "$LITTLE_STEPS_KEYSTORE_PASSWORD"
+          test -n "$LITTLE_STEPS_KEY_ALIAS"
+          test -n "$LITTLE_STEPS_KEY_PASSWORD"
+          ./gradlew testDebugUnitTest lintDebug assembleRelease --no-daemon
+          test "$LITTLE_STEPS_KEY_ALIAS" = "xiaojianchi"
+      - name: Package update metadata
+        env:
+          LITTLE_STEPS_KEYSTORE_FILE: >-
+            ${{ runner.temp }}/little-steps.keystore
+          LITTLE_STEPS_KEYSTORE_PASSWORD: >-
+            ${{ secrets.LITTLE_STEPS_KEYSTORE_PASSWORD }}
+          LITTLE_STEPS_KEY_ALIAS: >-
+            ${{ secrets.LITTLE_STEPS_KEY_ALIAS }}
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" \
+            verify --verbose --print-certs \
+            app/build/outputs/apk/release/app-release.apk
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk \
+            dist/little-steps.apk
+          python3 <<'PY'
+          import datetime
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import re
+
+          tag = os.environ['GITHUB_REF_NAME']
+          repo = os.environ['GITHUB_REPOSITORY']
+          build = pathlib.Path('app/build.gradle.kts').read_text()
+          code_match = re.search(r'versionCode\s*=\s*(\d+)', build)
+          name_match = re.search(r'versionName\s*=\s*"([^"]+)"', build)
+          version_code = int(code_match.group(1))
+          version_name = name_match.group(1)
+          expected = tag[1:] if tag.startswith('v') else tag
+          if version_name != expected:
+              message = f'Tag {tag} != versionName {version_name}'
+              raise SystemExit(message)
+          apk = pathlib.Path('dist/little-steps.apk')
+          apk_url = (
+              f'https://github.com/{repo}/releases/download/'
+              f'{tag}/little-steps.apk'
+          )
+          published = datetime.datetime.now(datetime.timezone.utc)
+          manifest = {
+              'versionCode': version_code,
+              'versionName': version_name,
+              'apkUrl': apk_url,
+              'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),
+              'notes': pathlib.Path('RELEASE_NOTES.md').read_text().strip(),
+              'publishedAt': published.isoformat().replace('+00:00', 'Z'),
+          }
+          content = json.dumps(manifest, ensure_ascii=False, indent=2)
+          pathlib.Path('dist/update.json').write_text(content + '\n')
+          PY
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" \
+              dist/little-steps.apk dist/update.json --clobber
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "小坚持 $GITHUB_REF_NAME" \
+              --notes-file RELEASE_NOTES.md
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              dist/little-steps.apk dist/update.json \
+              --title "小坚持 $GITHUB_REF_NAME" \
+              --notes-file RELEASE_NOTES.md --verify-tag
+          fi

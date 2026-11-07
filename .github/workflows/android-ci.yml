@@ -19,8 +19,11 @@ jobs:
           java-version: "17"
       - name: Install Android SDK 35
         run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" \
+            -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
       - name: Unit tests, lint and debug APK
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

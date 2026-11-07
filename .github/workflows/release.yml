@@ -18,8 +18,11 @@ jobs:
           java-version: "17"
       - name: Install Android SDK 35
         run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" \
+            -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
       - name: Restore the stable release signing key
         env:
           LITTLE_STEPS_KEYSTORE_BASE64: >-

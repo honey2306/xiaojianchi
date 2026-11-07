@@ -73,13 +73,19 @@ fun UpdateDialog(
         }
 
         UpdateState.UpToDate -> {
-            UpdateAlert("已经是最新版本", onDismiss, "好的", onDismiss) {
+            UpdateAlert(
+                title = "已经是最新版本",
+                onDismiss = onDismiss,
+                confirm = "好的",
+                onConfirm = onDismiss,
+                showDismiss = false,
+            ) {
                 Text("继续按自己的节奏，认真生活就好。")
             }
         }
 
         is UpdateState.Error -> {
-            UpdateAlert("暂时无法检查更新", onDismiss, "稍后再试", onDismiss) {
+            UpdateAlert("更新暂时未完成", onDismiss, "稍后再试", onDismiss, dismissLabel = "关闭") {
                 Text(state.message, lineHeight = 22.sp)
             }
         }
@@ -96,6 +102,8 @@ private fun UpdateAlert(
     onDismiss: () -> Unit,
     confirm: String,
     onConfirm: () -> Unit,
+    showDismiss: Boolean = true,
+    dismissLabel: String = "暂不更新",
     content: @Composable () -> Unit,
 ) {
     AlertDialog(
@@ -103,7 +111,12 @@ private fun UpdateAlert(
         title = { Text(title, fontFamily = FontFamily.Serif) },
         text = { Column { content() } },
         confirmButton = { TextButton(onClick = onConfirm) { Text(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("暂不更新") } },
+        dismissButton =
+            if (showDismiss) {
+                { TextButton(onClick = onDismiss) { Text(dismissLabel) } }
+            } else {
+                null
+            },
         containerColor = PaperLight,
     )
 }

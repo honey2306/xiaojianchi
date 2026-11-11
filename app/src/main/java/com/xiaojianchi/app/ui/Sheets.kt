@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -92,214 +93,221 @@ fun HabitEditorSheet(
     val isNew = existing == null
     val availablePriorDays = maxOf(0L, today.toEpochDay() - startDate.toEpochDay()).toInt()
     val priorDays = priorDaysText.toIntOrNull()?.coerceIn(0, availablePriorDays) ?: 0
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PaperLight) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(start = 22.dp, end = 22.dp, bottom = 28.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (existing == null) "想坚持什么？" else "照顾这个小习惯", style = MaterialTheme.typography.headlineSmall, fontSize = 22.sp)
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "关闭") }
-            }
-            Spacer(Modifier.height(14.dp))
-            Text("习惯名称", color = Muted, fontSize = 11.sp)
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = name,
-                onValueChange = { if (it.length <= 12) name = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("例如：每天写一点") },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-            )
-            Spacer(Modifier.height(18.dp))
-            Text("选择一个图标", color = Muted, fontSize = 11.sp)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("book", "move", "language", "lotus", "spark").forEach { item ->
-                    Box(
-                        Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(if (icon == item) SageSoft else Color.Transparent)
-                            .border(1.dp, if (icon == item) Sage else LineColor, RoundedCornerShape(15.dp))
-                            .clickable { icon = item },
-                        contentAlignment = Alignment.Center,
-                    ) { HabitIcon(item, Modifier.size(23.dp), if (icon == item) Sage else Muted) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PaperLight) {
+        Column(Modifier.fillMaxWidth().imePadding()) {
+            Column(
+                Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 22.dp, end = 22.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (existing == null) "想坚持什么？" else "照顾这个小习惯", style = MaterialTheme.typography.headlineSmall, fontSize = 22.sp)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, contentDescription = "关闭") }
                 }
-            }
-            Spacer(Modifier.height(18.dp))
-            Text("一点属于自己的颜色", color = Muted, fontSize = 11.sp)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HabitColors.forEach { item ->
-                    Box(
-                        Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(item)
-                            .border(2.dp, if (color == item) Ink else PaperLight, CircleShape)
-                            .clickable { color = item },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (color ==
-                            item
+                Spacer(Modifier.height(14.dp))
+                Text("习惯名称", color = Muted, fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { if (it.length <= 12) name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("例如：每天写一点") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                )
+                Spacer(Modifier.height(18.dp))
+                Text("选择一个图标", color = Muted, fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf("book", "move", "language", "lotus", "spark").forEach { item ->
+                        Box(
+                            Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(if (icon == item) SageSoft else Color.Transparent)
+                                .border(1.dp, if (icon == item) Sage else LineColor, RoundedCornerShape(15.dp))
+                                .clickable { icon = item },
+                            contentAlignment = Alignment.Center,
+                        ) { HabitIcon(item, Modifier.size(23.dp), if (icon == item) Sage else Muted) }
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
+                Text("一点属于自己的颜色", color = Muted, fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HabitColors.forEach { item ->
+                        Box(
+                            Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(item)
+                                .border(2.dp, if (color == item) Ink else PaperLight, CircleShape)
+                                .clickable { color = item },
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Rounded.Check, contentDescription = "已选择颜色", tint = Color.White, modifier = Modifier.size(18.dp))
+                            if (color ==
+                                item
+                            ) {
+                                Icon(Icons.Rounded.Check, contentDescription = "已选择颜色", tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
                         }
                     }
                 }
-            }
-            Spacer(Modifier.height(20.dp))
-            Text("从哪天开始", color = Muted, fontSize = 11.sp)
-            Spacer(Modifier.height(6.dp))
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            DatePickerDialog(
-                                context,
-                                { _, year, month, day ->
-                                    startDate = clampStartDate(LocalDate.of(year, month + 1, day), earliestCheckIn)
-                                },
-                                startDate.year,
-                                startDate.monthValue - 1,
-                                startDate.dayOfMonth,
-                            ).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
-                        }.padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+                Spacer(Modifier.height(20.dp))
+                Text("从哪天开始", color = Muted, fontSize = 11.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, day ->
+                                        startDate = clampStartDate(LocalDate.of(year, month + 1, day), earliestCheckIn)
+                                    },
+                                    startDate.year,
+                                    startDate.monthValue - 1,
+                                    startDate.dayOfMonth,
+                                ).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
+                            }.padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "${startDate.year} 年 ${startDate.monthValue} 月 ${startDate.dayOfMonth} 日",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text("更改", color = Sage, fontSize = 11.sp)
+                }
                 Text(
-                    "${startDate.year} 年 ${startDate.monthValue} 月 ${startDate.dayOfMonth} 日",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    when {
+                        isNew -> {
+                            "之前已经在做了？设到开始的那一天，下面可以一次记下已经坚持的日子。"
+                        }
+
+                        earliestCheckIn != null -> {
+                            "开始日期只标记足迹的起点，不能晚于第一条记录" +
+                                "（${earliestCheckIn.monthValue} 月 ${earliestCheckIn.dayOfMonth} 日）。"
+                        }
+
+                        else -> {
+                            "开始日期只标记足迹的起点，已经记下的不会受影响。"
+                        }
+                    },
+                    color = Muted,
+                    fontSize = 10.sp,
                 )
-                Spacer(Modifier.weight(1f))
-                Text("更改", color = Sage, fontSize = 11.sp)
-            }
-            Text(
-                when {
-                    isNew -> {
-                        "之前已经在做了？设到开始的那一天，下面可以一次记下已经坚持的日子。"
+                if (isNew) {
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("已经坚持了多久", fontWeight = FontWeight.Medium)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                if (availablePriorDays > 0) {
+                                    "可以把之前连续的日子一次记下，最多 $availablePriorDays 天，之后只补记最近 7 天"
+                                } else {
+                                    "从今天开始，先留下一次就很好"
+                                },
+                                color = Muted,
+                                fontSize = 10.sp,
+                            )
+                        }
+                        OutlinedTextField(
+                            value = priorDaysText,
+                            onValueChange = { input ->
+                                priorDaysText = input.filter { it.isDigit() }.take(4)
+                            },
+                            enabled = availablePriorDays > 0,
+                            modifier = Modifier.width(104.dp),
+                            placeholder = { Text("0", fontSize = 14.sp) },
+                            suffix = { Text("天", fontSize = 12.sp, color = Muted) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
                     }
-
-                    earliestCheckIn != null -> {
-                        "开始日期只标记足迹的起点，不能晚于第一条记录" +
-                            "（${earliestCheckIn.monthValue} 月 ${earliestCheckIn.dayOfMonth} 日）。"
-                    }
-
-                    else -> {
-                        "开始日期只标记足迹的起点，已经记下的不会受影响。"
-                    }
-                },
-                color = Muted,
-                fontSize = 10.sp,
-            )
-            if (isNew) {
-                Spacer(Modifier.height(16.dp))
+                }
+                Spacer(Modifier.height(20.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("已经坚持了多久", fontWeight = FontWeight.Medium)
+                        Text("每日温和提醒", fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            if (availablePriorDays > 0) {
-                                "可以把之前连续的日子一次记下，最多 $availablePriorDays 天，之后只补记最近 7 天"
+                            if (reminderEnabled) {
+                                "${"%02d".format(
+                                    reminderMinutes / 60,
+                                )}:${"%02d".format(reminderMinutes % 60)} · 今天想给自己留一点时间吗？"
                             } else {
-                                "从今天开始，先留下一次就很好"
+                                "不提醒，按自己的节奏来"
                             },
                             color = Muted,
                             fontSize = 10.sp,
                         )
                     }
-                    OutlinedTextField(
-                        value = priorDaysText,
-                        onValueChange = { input ->
-                            priorDaysText = input.filter { it.isDigit() }.take(4)
+                    Switch(
+                        checked = reminderEnabled,
+                        onCheckedChange = {
+                            reminderEnabled = it
+                            if (it) onRequestNotifications()
                         },
-                        enabled = availablePriorDays > 0,
-                        modifier = Modifier.width(104.dp),
-                        placeholder = { Text("0", fontSize = 14.sp) },
-                        suffix = { Text("天", fontSize = 12.sp, color = Muted) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = SwitchDefaults.colors(checkedTrackColor = Sage),
                     )
+                }
+                if (reminderEnabled) {
+                    TextButton(onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute -> reminderMinutes = hour * 60 + minute },
+                            reminderMinutes / 60,
+                            reminderMinutes % 60,
+                            true,
+                        ).show()
+                    }) { Text("调整提醒时间") }
                 }
             }
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("每日温和提醒", fontWeight = FontWeight.Medium)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        if (reminderEnabled) {
-                            "${"%02d".format(
-                                reminderMinutes / 60,
-                            )}:${"%02d".format(reminderMinutes % 60)} · 今天想给自己留一点时间吗？"
-                        } else {
-                            "不提醒，按自己的节奏来"
-                        },
-                        color = Muted,
-                        fontSize = 10.sp,
-                    )
-                }
-                Switch(
-                    checked = reminderEnabled,
-                    onCheckedChange = {
-                        reminderEnabled = it
-                        if (it) onRequestNotifications()
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 22.dp, end = 22.dp, top = 12.dp, bottom = 24.dp),
+            ) {
+                Button(
+                    onClick = {
+                        onSave(
+                            (
+                                existing
+                                    ?: HabitEntity(
+                                        name = "",
+                                        icon = "book",
+                                        color = HabitColors.first().toArgb().toLong(),
+                                        sortOrder = nextSortOrder,
+                                    )
+                            ).copy(
+                                name = name.trim(),
+                                icon = icon,
+                                color = color.toArgb().toLong(),
+                                createdDate = startDate,
+                                reminderMinutes = if (reminderEnabled) reminderMinutes else null,
+                            ),
+                            priorDays,
+                        )
                     },
-                    colors = SwitchDefaults.colors(checkedTrackColor = Sage),
-                )
-            }
-            if (reminderEnabled) {
-                TextButton(onClick = {
-                    TimePickerDialog(
-                        context,
-                        { _, hour, minute -> reminderMinutes = hour * 60 + minute },
-                        reminderMinutes / 60,
-                        reminderMinutes % 60,
-                        true,
-                    ).show()
-                }) { Text("调整提醒时间") }
-            }
-            Spacer(Modifier.height(14.dp))
-            Button(
-                onClick = {
-                    onSave(
-                        (
-                            existing
-                                ?: HabitEntity(
-                                    name = "",
-                                    icon = "book",
-                                    color = HabitColors.first().toArgb().toLong(),
-                                    sortOrder = nextSortOrder,
-                                )
-                        ).copy(
-                            name = name.trim(),
-                            icon = icon,
-                            color = color.toArgb().toLong(),
-                            createdDate = startDate,
-                            reminderMinutes = if (reminderEnabled) reminderMinutes else null,
-                        ),
-                        priorDays,
-                    )
-                },
-                enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) { Text(if (existing == null) "开始坚持" else "保存改变") }
-            if (existing != null) {
-                TextButton(onClick = {
-                    archiveConfirm = true
-                }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.textButtonColors(contentColor = Muted)) {
-                    Text("归档这个习惯，保留过去的记录")
+                    enabled = name.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) { Text(if (existing == null) "开始坚持" else "保存改变") }
+                if (existing != null) {
+                    TextButton(onClick = {
+                        archiveConfirm = true
+                    }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.textButtonColors(contentColor = Muted)) {
+                        Text("归档这个习惯，保留过去的记录")
+                    }
                 }
             }
         }
@@ -325,7 +333,8 @@ fun NoteEditorSheet(
     onSave: (String) -> Unit,
 ) {
     var note by remember(checkIn.id) { mutableStateOf(checkIn.note) }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PaperLight) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PaperLight) {
         Column(Modifier.fillMaxWidth().imePadding().padding(start = 22.dp, end = 22.dp, bottom = 28.dp)) {
             Text("今天也做到了", style = MaterialTheme.typography.headlineSmall, fontSize = 22.sp)
             Spacer(Modifier.height(8.dp))
@@ -361,7 +370,8 @@ fun DayDetailSheet(
     onUncheck: () -> Unit,
 ) {
     val canBackfill = !date.isAfter(today) && !date.isBefore(editableFrom)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PaperLight) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = PaperLight) {
         Column(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, bottom = 28.dp)) {
             Text("${date.monthValue} 月 ${date.dayOfMonth} 日", style = MaterialTheme.typography.headlineSmall, fontSize = 24.sp)
             Spacer(Modifier.height(8.dp))

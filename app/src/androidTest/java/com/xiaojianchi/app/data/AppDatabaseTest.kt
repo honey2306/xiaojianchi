@@ -100,12 +100,13 @@ class AppDatabaseTest {
         }
 
     @Test(expected = IllegalArgumentException::class)
-    fun datesBeforeTheStartDateCannotBeCheckedIn() =
+    fun datesBeforeTheStartDateCannotBeCheckedIn() {
         runBlocking {
             val today = LocalDate.now()
             val id = repository.saveHabit(HabitEntity(name = "早睡", icon = "spark", color = 0xFF4E7E91.toLong()))
             repository.setChecked(id, today.minusDays(30), backfill = true)
         }
+    }
 
     @Test
     fun archivingPreservesPastCheckIns() =
@@ -123,7 +124,7 @@ class AppDatabaseTest {
         }
 
     @Test(expected = IllegalArgumentException::class)
-    fun oldStartsDoNotWidenTheBackfillWindow() =
+    fun oldStartsDoNotWidenTheBackfillWindow() {
         runBlocking {
             val today = LocalDate.now()
             val id =
@@ -132,4 +133,5 @@ class AppDatabaseTest {
                 )
             repository.setChecked(id, today.minusDays(8), backfill = true)
         }
+    }
 }

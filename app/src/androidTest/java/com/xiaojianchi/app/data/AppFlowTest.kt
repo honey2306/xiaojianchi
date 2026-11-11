@@ -48,4 +48,12 @@ class AppFlowTest {
         composeRule.onNodeWithText("当前连续").assertIsDisplayed()
         composeRule.onNodeWithText("“今天只读了十分钟，也很好。”").performScrollTo().assertIsDisplayed()
     }
+
+    @Test
+    fun habitEditorKeepsTheSaveActionVisible() {
+        composeRule.onNodeWithText("写下第一个习惯").performClick()
+        composeRule.onNodeWithText("开始坚持").assertIsDisplayed()
+        composeRule.onNodeWithText("从哪天开始").assertIsDisplayed()
+        composeRule.onNodeWithText("已经坚持了多久").assertIsDisplayed()
+    }
 }

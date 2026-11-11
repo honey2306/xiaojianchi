@@ -9,10 +9,11 @@ val littleStepsKeystoreFile = providers.environmentVariable("LITTLE_STEPS_KEYSTO
 val littleStepsKeystorePassword = providers.environmentVariable("LITTLE_STEPS_KEYSTORE_PASSWORD").orElse("").get()
 val littleStepsKeyAlias = providers.environmentVariable("LITTLE_STEPS_KEY_ALIAS").orElse("").get()
 val littleStepsKeyPassword = providers.environmentVariable("LITTLE_STEPS_KEY_PASSWORD").orElse("").get()
-val littleStepsSigningEnabled = littleStepsKeystoreFile.isNotBlank() &&
-    littleStepsKeystorePassword.isNotBlank() &&
-    littleStepsKeyAlias.isNotBlank() &&
-    littleStepsKeyPassword.isNotBlank()
+val littleStepsSigningEnabled =
+    littleStepsKeystoreFile.isNotBlank() &&
+        littleStepsKeystorePassword.isNotBlank() &&
+        littleStepsKeyAlias.isNotBlank() &&
+        littleStepsKeyPassword.isNotBlank()
 
 android {
     namespace = "com.xiaojianchi.app"
@@ -26,7 +27,11 @@ android {
         versionName = "1.0.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
-        buildConfigField("String", "UPDATE_MANIFEST_URL", "\"https://github.com/honey2306/xiaojianchi/releases/latest/download/update.json\"")
+        buildConfigField(
+            "String",
+            "UPDATE_MANIFEST_URL",
+            "\"https://github.com/honey2306/xiaojianchi/releases/latest/download/update.json\"",
+        )
         buildConfigField("String", "UPDATE_FALLBACK_URL", "\"https://honey2306.github.io/xiaojianchi/update.json\"")
     }
 
@@ -47,7 +52,10 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    buildFeatures { compose = true; buildConfig = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     lint { disable += "GradleDependency" }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

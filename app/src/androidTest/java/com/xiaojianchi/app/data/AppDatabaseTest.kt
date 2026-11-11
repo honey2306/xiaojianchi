@@ -89,7 +89,14 @@ class AppDatabaseTest {
                 priorDays = 10,
                 today = today,
             )
-            assertEquals(2, repository.observeActiveHabits().first().single().checkIns.size)
+            assertEquals(
+                2,
+                repository
+                    .observeActiveHabits()
+                    .first()
+                    .single()
+                    .checkIns.size,
+            )
         }
 
     @Test(expected = IllegalArgumentException::class)

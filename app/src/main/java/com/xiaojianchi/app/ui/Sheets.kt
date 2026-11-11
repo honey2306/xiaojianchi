@@ -185,11 +185,18 @@ fun HabitEditorSheet(
             }
             Text(
                 when {
-                    isNew -> "之前已经在做了？设到开始的那一天，下面可以一次记下已经坚持的日子。"
-                    earliestCheckIn != null ->
+                    isNew -> {
+                        "之前已经在做了？设到开始的那一天，下面可以一次记下已经坚持的日子。"
+                    }
+
+                    earliestCheckIn != null -> {
                         "开始日期只标记足迹的起点，不能晚于第一条记录" +
-                        "（${earliestCheckIn.monthValue} 月 ${earliestCheckIn.dayOfMonth} 日）。"
-                    else -> "开始日期只标记足迹的起点，已经记下的不会受影响。"
+                            "（${earliestCheckIn.monthValue} 月 ${earliestCheckIn.dayOfMonth} 日）。"
+                    }
+
+                    else -> {
+                        "开始日期只标记足迹的起点，已经记下的不会受影响。"
+                    }
                 },
                 color = Muted,
                 fontSize = 10.sp,

@@ -40,10 +40,9 @@ class MainViewModel(
         onComplete: () -> Unit = {},
     ) {
         require(!date.isAfter(LocalDate.now())) { "未来日期不能打卡" }
-        require(!backfill || !date.isBefore(LocalDate.now().minusDays(7))) { "仅支持补记最近 7 天" }
         viewModelScope.launch {
-            repository.setChecked(habitId, date, backfill)
-            onComplete()
+            runCatching { repository.setChecked(habitId, date, backfill) }
+                .onSuccess { onComplete() }
         }
     }
 
@@ -72,10 +71,11 @@ class MainViewModel(
 
     fun saveHabit(
         habit: HabitEntity,
+        priorDays: Int = 0,
         onComplete: (Long) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val id = repository.saveHabit(habit)
+            val id = repository.saveHabit(habit, priorDays)
             val saved = habit.copy(id = id)
             if (saved.reminderMinutes == null) ReminderScheduler.cancel(app, id) else ReminderScheduler.schedule(app, saved)
             onComplete(id)

@@ -1,5 +1,6 @@
 package com.xiaojianchi.app.ui
 
+import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.provider.Settings
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
@@ -51,21 +53,30 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.xiaojianchi.app.data.CheckInEntity
 import com.xiaojianchi.app.BuildConfig
+import com.xiaojianchi.app.data.CheckInEntity
 import com.xiaojianchi.app.data.HabitEntity
 import com.xiaojianchi.app.update.UpdateState
 import java.time.LocalDate
+
+/** 开始日期不能晚于已有的第一条记录，否则日历里会出现「开始之前就有脚印」。 */
+private fun clampStartDate(
+    date: LocalDate,
+    earliestCheckIn: LocalDate?,
+): LocalDate = if (earliestCheckIn != null && date.isAfter(earliestCheckIn)) earliestCheckIn else date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitEditorSheet(
     existing: HabitEntity?,
     nextSortOrder: Int,
+    today: LocalDate,
+    earliestCheckIn: LocalDate?,
     onDismiss: () -> Unit,
-    onSave: (HabitEntity) -> Unit,
+    onSave: (HabitEntity, Int) -> Unit,
     onArchive: (Long) -> Unit,
     onRequestNotifications: () -> Unit,
 ) {
@@ -74,8 +85,13 @@ fun HabitEditorSheet(
     var color by remember(existing) { mutableStateOf(existing?.color?.let(::Color) ?: HabitColors.first()) }
     var reminderEnabled by remember(existing) { mutableStateOf(existing?.reminderMinutes != null) }
     var reminderMinutes by remember(existing) { mutableIntStateOf(existing?.reminderMinutes ?: 20 * 60 + 30) }
+    var startDate by remember(existing) { mutableStateOf(clampStartDate(existing?.createdDate ?: today, earliestCheckIn)) }
+    var priorDaysText by remember(existing) { mutableStateOf("") }
     var archiveConfirm by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val isNew = existing == null
+    val availablePriorDays = maxOf(0L, today.toEpochDay() - startDate.toEpochDay()).toInt()
+    val priorDays = priorDaysText.toIntOrNull()?.coerceIn(0, availablePriorDays) ?: 0
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PaperLight) {
         Column(
             Modifier
@@ -139,6 +155,77 @@ fun HabitEditorSheet(
                 }
             }
             Spacer(Modifier.height(20.dp))
+            Text("从哪天开始", color = Muted, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, day ->
+                                    startDate = clampStartDate(LocalDate.of(year, month + 1, day), earliestCheckIn)
+                                },
+                                startDate.year,
+                                startDate.monthValue - 1,
+                                startDate.dayOfMonth,
+                            ).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
+                        }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "${startDate.year} 年 ${startDate.monthValue} 月 ${startDate.dayOfMonth} 日",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.weight(1f))
+                Text("更改", color = Sage, fontSize = 11.sp)
+            }
+            Text(
+                when {
+                    isNew -> "之前已经在做了？设到开始的那一天，下面可以一次记下已经坚持的日子。"
+                    earliestCheckIn != null ->
+                        "开始日期只标记足迹的起点，不能晚于第一条记录" +
+                        "（${earliestCheckIn.monthValue} 月 ${earliestCheckIn.dayOfMonth} 日）。"
+                    else -> "开始日期只标记足迹的起点，已经记下的不会受影响。"
+                },
+                color = Muted,
+                fontSize = 10.sp,
+            )
+            if (isNew) {
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("已经坚持了多久", fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (availablePriorDays > 0) {
+                                "可以把之前连续的日子一次记下，最多 $availablePriorDays 天，之后只补记最近 7 天"
+                            } else {
+                                "从今天开始，先留下一次就很好"
+                            },
+                            color = Muted,
+                            fontSize = 10.sp,
+                        )
+                    }
+                    OutlinedTextField(
+                        value = priorDaysText,
+                        onValueChange = { input ->
+                            priorDaysText = input.filter { it.isDigit() }.take(4)
+                        },
+                        enabled = availablePriorDays > 0,
+                        modifier = Modifier.width(104.dp),
+                        placeholder = { Text("0", fontSize = 14.sp) },
+                        suffix = { Text("天", fontSize = 12.sp, color = Muted) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    )
+                }
+            }
+            Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("每日温和提醒", fontWeight = FontWeight.Medium)
@@ -191,8 +278,10 @@ fun HabitEditorSheet(
                             name = name.trim(),
                             icon = icon,
                             color = color.toArgb().toLong(),
+                            createdDate = startDate,
                             reminderMinutes = if (reminderEnabled) reminderMinutes else null,
                         ),
+                        priorDays,
                     )
                 },
                 enabled = name.isNotBlank(),
@@ -257,12 +346,14 @@ fun DayDetailSheet(
     date: LocalDate,
     checkIn: CheckInEntity?,
     today: LocalDate,
+    startDate: LocalDate,
+    editableFrom: LocalDate,
     onDismiss: () -> Unit,
     onCheckIn: () -> Unit,
     onEditNote: () -> Unit,
     onUncheck: () -> Unit,
 ) {
-    val canBackfill = !date.isAfter(today) && !date.isBefore(today.minusDays(7))
+    val canBackfill = !date.isAfter(today) && !date.isBefore(editableFrom)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PaperLight) {
         Column(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, bottom = 28.dp)) {
             Text("${date.monthValue} 月 ${date.dayOfMonth} 日", style = MaterialTheme.typography.headlineSmall, fontSize = 24.sp)
@@ -290,7 +381,14 @@ fun DayDetailSheet(
                 ) {
                     Text(if (date == today) "完成今日打卡" else "补记这一天")
                 }
-                if (!canBackfill) Text("仅支持补记最近 7 天", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+                if (!canBackfill) {
+                    Text(
+                        if (date.isBefore(startDate)) "这一天在你开始之前，不用补记" else "补记最多回到最近 7 天",
+                        color = Muted,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
             } else {
                 Button(
                     onClick = onEditNote,

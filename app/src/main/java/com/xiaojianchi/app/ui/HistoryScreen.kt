@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.xiaojianchi.app.data.HabitWithCheckIns
 import com.xiaojianchi.app.data.calculateHabitStats
+import com.xiaojianchi.app.data.canEditDate
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -133,7 +134,8 @@ fun HistoryScreen(
             item { LatestNote(selected) }
             item {
                 Text(
-                    "中断不会抹去你已经走过的 ${calculateHabitStats(selected.checkIns, today).total} 天。",
+                    "从 ${selected.habit.createdDate.monthValue} 月 ${selected.habit.createdDate.dayOfMonth} 日开始，" +
+                        "中断不会抹去你已经走过的 ${calculateHabitStats(selected.checkIns, today).total} 天。",
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                     color = Color(0xFF7A6E5E),
                     fontFamily = FontFamily.Serif,
@@ -214,7 +216,7 @@ private fun MonthCalendar(
                         } else {
                             val date = month.atDay(day)
                             val checkIn = checks[date]
-                            val canEdit = checkIn != null || (!date.isAfter(today) && !date.isBefore(today.minusDays(7)))
+                            val canEdit = checkIn != null || item.habit.canEditDate(date, today)
                             DayCell(
                                 day = day,
                                 marked = checkIn != null,

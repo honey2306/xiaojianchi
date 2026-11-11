@@ -43,6 +43,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.xiaojianchi.app.data.HabitEntity
+import com.xiaojianchi.app.data.editableFrom
 import com.xiaojianchi.app.ui.DayDetailSheet
 import com.xiaojianchi.app.ui.HabitEditorSheet
 import com.xiaojianchi.app.ui.HistoryScreen
@@ -231,11 +232,22 @@ private fun LittleStepsApp(
             HabitEditorSheet(
                 existing = current.habit,
                 nextSortOrder = habits.size,
+                today = today,
+                earliestCheckIn =
+                    current.habit?.let { editing ->
+                        habits.firstOrNull { it.habit.id == editing.id }?.checkIns?.minOfOrNull { it.date }
+                    },
                 onDismiss = { sheet = null },
-                onSave = { habit ->
-                    viewModel.saveHabit(habit) {
+                onSave = { habit, priorDays ->
+                    viewModel.saveHabit(habit, priorDays) {
                         sheet = null
-                        showMessage(if (current.habit == null) "新习惯已加入，从一次开始。" else "改变已保存。")
+                        showMessage(
+                            when {
+                                current.habit != null -> "改变已保存。"
+                                priorDays > 0 -> "新习惯已加入，之前的坚持也记下了。"
+                                else -> "新习惯已加入，从一次开始。"
+                            },
+                        )
                     }
                 },
                 onArchive = { id ->
@@ -260,6 +272,8 @@ private fun LittleStepsApp(
                     date = current.date,
                     checkIn = checkIn,
                     today = today,
+                    startDate = habit.habit.createdDate,
+                    editableFrom = habit.habit.editableFrom(today),
                     onDismiss = { sheet = null },
                     onCheckIn = {
                         viewModel.checkIn(current.habitId, current.date, backfill = current.date != today) {

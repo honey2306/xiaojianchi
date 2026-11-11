@@ -11,12 +11,33 @@ class HabitRepository(
 
     fun observeActiveHabits(): Flow<List<HabitWithCheckIns>> = dao.observeActiveHabits()
 
-    suspend fun saveHabit(habit: HabitEntity): Long =
-        if (habit.id == 0L) {
-            dao.insertHabit(habit)
-        } else {
-            dao.updateHabit(habit)
-            habit.id
+    /**
+     * 保存习惯。新建时可以把之前已经坚持的 [priorDays] 天（截止昨天）
+     * 一并记下，让累计天数不从第一天重新开始。
+     */
+    suspend fun saveHabit(
+        habit: HabitEntity,
+        priorDays: Int = 0,
+        today: LocalDate = LocalDate.now(),
+    ): Long =
+        database.withTransaction {
+            val id =
+                if (habit.id == 0L) {
+                    dao.insertHabit(habit)
+                } else {
+                    dao.updateHabit(habit)
+                    habit.id
+                }
+            if (habit.id == 0L && priorDays > 0) {
+                val count = minOf(priorDays, habit.copy(id = id).availablePriorDays(today))
+                (1..count).forEach { offset ->
+                    val date = today.minusDays(offset.toLong())
+                    if (dao.checkIn(id, date) == null) {
+                        dao.insertCheckIn(CheckInEntity(habitId = id, date = date, backfill = true))
+                    }
+                }
+            }
+            id
         }
 
     suspend fun habit(id: Long): HabitEntity? = dao.habitById(id)
@@ -30,7 +51,10 @@ class HabitRepository(
         date: LocalDate,
         backfill: Boolean,
     ): CheckInEntity {
-        require(!date.isAfter(LocalDate.now())) { "Future dates cannot be checked in." }
+        val today = LocalDate.now()
+        require(!date.isAfter(today)) { "Future dates cannot be checked in." }
+        val habit = dao.habitById(habitId) ?: error("Habit $habitId no longer exists.")
+        require(habit.canEditDate(date, today)) { "$date is before the habit start date." }
         return database.withTransaction {
             dao.checkIn(habitId, date) ?: CheckInEntity(habitId = habitId, date = date, backfill = backfill).also {
                 dao.insertCheckIn(it)

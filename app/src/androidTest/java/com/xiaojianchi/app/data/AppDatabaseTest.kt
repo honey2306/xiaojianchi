@@ -62,13 +62,67 @@ class AppDatabaseTest {
         }
 
     @Test
+    fun savingWithPriorDaysKeepsTheStreakSoFar() =
+        runBlocking {
+            val today = LocalDate.now()
+            val id =
+                repository.saveHabit(
+                    HabitEntity(name = "跑步", icon = "move", color = 0xFF5C8371.toLong(), createdDate = today.minusDays(30)),
+                    priorDays = 3,
+                    today = today,
+                )
+            val item = repository.observeActiveHabits().first().single()
+            assertEquals(
+                setOf(today.minusDays(1), today.minusDays(2), today.minusDays(3)),
+                item.checkIns.map { it.date }.toSet(),
+            )
+            assertEquals(HabitStats(total = 3, current = 3, longest = 3), calculateHabitStats(item.checkIns, today))
+            assertEquals(id, item.habit.id)
+        }
+
+    @Test
+    fun priorDaysAreClampedBeforeTheStartDate() =
+        runBlocking {
+            val today = LocalDate.now()
+            repository.saveHabit(
+                HabitEntity(name = "冥想", icon = "lotus", color = 0xFFB2934F.toLong(), createdDate = today.minusDays(2)),
+                priorDays = 10,
+                today = today,
+            )
+            assertEquals(2, repository.observeActiveHabits().first().single().checkIns.size)
+        }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun datesBeforeTheStartDateCannotBeCheckedIn() =
+        runBlocking {
+            val today = LocalDate.now()
+            val id = repository.saveHabit(HabitEntity(name = "早睡", icon = "spark", color = 0xFF4E7E91.toLong()))
+            repository.setChecked(id, today.minusDays(30), backfill = true)
+        }
+
+    @Test
     fun archivingPreservesPastCheckIns() =
         runBlocking {
-            val id = repository.saveHabit(HabitEntity(name = "冥想", icon = "lotus", color = 0xFFB2934F.toLong()))
-            repository.setChecked(id, LocalDate.now().minusDays(1), backfill = true)
-            repository.saveNote(id, LocalDate.now().minusDays(1), "安静的五分钟")
+            val today = LocalDate.now()
+            val id =
+                repository.saveHabit(
+                    HabitEntity(name = "冥想", icon = "lotus", color = 0xFFB2934F.toLong(), createdDate = today.minusDays(1)),
+                )
+            repository.setChecked(id, today.minusDays(1), backfill = true)
+            repository.saveNote(id, today.minusDays(1), "安静的五分钟")
             repository.archiveHabit(id)
             assertTrue(repository.observeActiveHabits().first().isEmpty())
-            assertEquals("安静的五分钟", database.habitDao().checkIn(id, LocalDate.now().minusDays(1))?.note)
+            assertEquals("安静的五分钟", database.habitDao().checkIn(id, today.minusDays(1))?.note)
+        }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun oldStartsDoNotWidenTheBackfillWindow() =
+        runBlocking {
+            val today = LocalDate.now()
+            val id =
+                repository.saveHabit(
+                    HabitEntity(name = "拉伸", icon = "lotus", color = 0xFFB2934F.toLong(), createdDate = today.minusDays(30)),
+                )
+            repository.setChecked(id, today.minusDays(8), backfill = true)
         }
 }
